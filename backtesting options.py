@@ -145,7 +145,79 @@ for i,j in option_price_df1.items():
                     end=get_nearest_expiry(time).strftime('%Y%m%d')
                     atm='call'+str(open_price)+end
                     spot_price=underlying_df_5min[underlying_df_5min['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
-                    
+                    atm_price=option_price_df[atm][option_price_df[atm]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+
+                    #entry condition
+
+                    if (not first_trade) and (start.time()==datetime(time.year, time.month(),time.day(),10,15).time()):
+
+                        logging.info('taking positions at 10:15')
+                        first_trade=True
+                        high=underlying_df_5min[(underlying_df_5min.datetime>datetime(time.year,time.month,time.day,9,0).strftime('%Y-%m-%d %H:%M:%S'))& (underlying_df_5min.datetime<datetime(time.year,time.month,time.day,10,15).strftime('%Y-%m-%d %H:%M:%S'))].high.astype(float).max()
+                        low=underlying_df_5min[(underlying_df_5min.datetime>datetime(time.year,time.month,time.day,9,0).strftime('%Y-%m-%d %H:%M:%S')) & (underlying_df_5min.datetime<datetime(time.year,time.month,time.day,10,15).strftime('%Y-%m-%d %H:%M:%S'))].low.astype(float).min()
+                        logging.info('selling atm call and put option')
+                        atm_call_price=option_price_df[atm][option_price_df[atm]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                        atm_put_price=option_price_df[atm.replace('call','put')][option_price_df[atm.replace('call','put')]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                        money=money+int(float(atm_call_price))+int(float(atm_put_price))
+                        portfolio['atm_call']=atm_call_price
+                        portfolio['atm_put']=atm_put_price
+                        logging.info(str(atm_call_price)+','+str(atm_put_price)+','+str(portfolio)+','+str(money))
+                        trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'call'+end +","+'sell'+','+str(atm_call_price)+','+str(spot_price)+','+str(money-int(float(atm_put_price)))+'\n')
+                        trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'put'+end +","+'sell'+','+str(atm_put_price)+','+str(spot_price)+','+str(money)+'\n')
+
+                        #exit condition
+                    elif start==datetime(time.year,time.month,time.day,15,25):
+                        logging.info('closing positions at 15:25')
+                        if 'atm_call' in list(portfolio.keys()):
+                            logging.info('buying atm call option ')
+                            atm_call_price=option_price_df[atm][option_price_df[atm]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                            money=money-int(float(atm_call_price))
+                            del portfolio['atm_call']
+                            logging.info(str(atm_call_price)+','+str(portfolio)+','+str(money))
+                            trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'call'+end +","+'buy'+','+str(atm_call_price)+','+str(spot_price)+','+str(money)+'\n')
+                        if 'atm_put' in list(portfolio.keys()):
+                            logging.info('buying atm put option ')
+                            atm_put_price=option_price_df[atm.replace('call','put')][option_price_df[atm.replace('call','put')]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                            money=money-int(float(atm_put_price))
+                            del portfolio['atm_put']
+                            logging.info(str(atm_put_price)+','+str(portfolio)+','+str(money))
+                            trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'put'+end +","+'buy'+','+str(atm_put_price)+','+str(spot_price)+','+str(money)+'\n')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 except  Exception as e:
                     logging.info('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'+str(atm)+','+str(start)+','+str(end))
                     start=start+timedelta(days=2)
