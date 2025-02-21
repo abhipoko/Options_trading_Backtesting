@@ -183,42 +183,57 @@ for i,j in option_price_df1.items():
                             logging.info(str(atm_put_price)+','+str(portfolio)+','+str(money))
                             trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'put'+end +","+'buy'+','+str(atm_put_price)+','+str(spot_price)+','+str(money)+'\n')
 
+                            #strategy condition between entry and exit
 
+                    elif first_trade:
 
+                        if 'atm_call' in list(portfolio.keys()):
+                            print(spot_price,high,type(spot_price),type(high))
+                            if int(float(spot_price))>int(high):
+                                logging.info('buying atm call')
 
+                                atm_call_price=option_price_df[atm][option_price_df[atm]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                                money=money-int(float(atm_call_price))
+                                del portfolio['atm_call']
+                                logging.info(str(atm_call_price)+','+str(portfolio)+','+str(money))
+                                trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'call'+end +","+'buy'+','+str(atm_call_price)+','+str(spot_price)+','+str(money)+'\n')
+                        else:
+                            if int(float(spot_price))<int(high):
+                                logging.info('selling atm call')
+                                atm_call_price=option_price_df[atm][option_price_df[atm]['datetime']==start.strftime('%Y-%m-%d %H-%M-%S')].open.values[0]
+                                money=money+int(float(atm_call_price))
+                                portfolio['atm_call']=atm_call_price
+                                logging.info(str(atm_call_price)+','+str(portfolio)+','+str(money))
+                                trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'call'+end +","+'sell'+','+str(atm_call_price)+','+str(spot_price)+','+str(money)+'\n')
 
+                        if 'atm_put' in list(portfolio.keys()):
+                            if int(float(spot_price))<int(low):
+                                logging.info('Buying atm put option')
+                                atm_put_price=option_price_df[atm.replace('call','put')][option_price_df[atm.replace('call','put')]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                                money=money-int(float(atm_put_price))
+                                del portfolio['atm_put']
+                                logging.info(str(atm_put_price)+','+str(portfolio)+','+str(money))
+                                trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'put'+end +","+'buy'+','+str(atm_put_price)+','+str(spot_price)+','+str(money)+'\n')
 
+                            else:
+                                if int(float(spot_price))<int(low):
+                                    logging.info('selling atm put option')
+                                    atm_put_price=option_price_df[atm.replace('call','put')][option_price_df[atm.replace('call','put')]['datetime']==start.strftime('%Y-%m-%d %H:%M:%S')].open.values[0]
+                                    money=money-int(float(atm_put_price))
+                                    portfolio['atm_put']=atm_put_price
+                                    logging.info(str(atm_put_price)+','+str(portfolio)+','+str(money))
+                                    trades.write(start.strftime('%Y-%m-%d %H:%M:%S')+" , "+str(open_price)+'put'+end +","+'buy'+','+str(atm_put_price)+','+str(spot_price)+','+str(money)+'\n')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                            
+                        start=start+timedelta(minutes=5)
+                
 
 
                 except  Exception as e:
                     logging.info('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'+str(atm)+','+str(start)+','+str(end))
                     start=start+timedelta(days=2)
                     continue
+
+    print(money)
+    logging.info('money:'+str(money))
+    trades.close()
